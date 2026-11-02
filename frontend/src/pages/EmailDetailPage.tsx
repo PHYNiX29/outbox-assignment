@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { Archive, ArrowLeft, ExternalLink, Star, Trash2 } from 'lucide-react';
-import { useEmail } from '../api/hooks';
+import { useAppConfig, useEmail } from '../api/hooks';
 import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/ui/Avatar';
 import { FullPageSpinner } from '../components/ui/Spinner';
@@ -15,6 +15,7 @@ export function EmailDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: email, isLoading, error } = useEmail(id);
+  const { data: config } = useAppConfig();
   const html = useMemo(() => (email ? DOMPurify.sanitize(email.body) : ''), [email]);
 
   const header = (
@@ -90,6 +91,12 @@ export function EmailDetailPage() {
               >
                 <ExternalLink size={16} /> View delivered message on Ethereal
               </a>
+            )}
+            {email.status === 'sent' && !email.previewUrl && config?.simulatedDelivery && (
+              <p className="mt-6 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
+                Simulated send: SMTP is blocked on Railway&apos;s free plan, so this message went through the whole
+                queue and rate limits but wasn&apos;t delivered. Run the project locally to see it on Ethereal.
+              </p>
             )}
           </div>
         </div>

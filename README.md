@@ -114,6 +114,8 @@ The root `Dockerfile` builds the React app and the API into one image. Express s
 3. Set these variables on the app service: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `REDIS_URL=${{Redis.REDIS_URL}}`, `ELASTICSEARCH_URL` (if used), `JWT_SECRET`, `NODE_ENV=production`, `FRONTEND_URL` and `BACKEND_URL` (both set to the public Railway URL), plus the Google and Slack keys.
 4. Add `<public-url>/api/auth/google/callback` to the Google OAuth client and `<public-url>/api/slack/callback` to the Slack app's redirect URLs, and set `SLACK_REDIRECT_URI` to that callback.
 
+**Email delivery on Railway:** Railway's non-Pro plans block outbound SMTP, so Ethereal can't be reached from there. With `EMAIL_DELIVERY=auto` (the default), the app detects Railway (`RAILWAY_PROJECT_ID`) and **simulates** the final SMTP step. Each email still goes through the queue, the hourly limits, the per-sender delay and the idempotent claim, and is then marked Sent with a generated Message-ID but not delivered. The UI shows a banner explaining this. Run locally to send for real through Ethereal; this is what the demo video shows. Set `EMAIL_DELIVERY=smtp` to force real sending on a host that allows SMTP.
+
 ## 2. Architecture
 
 ```

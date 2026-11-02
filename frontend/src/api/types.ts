@@ -8,6 +8,8 @@ export interface User {
 export interface AppConfig {
   googleEnabled: boolean;
   slackEnabled: boolean;
+  /** True on Railway: SMTP is blocked there, so sends are simulated. */
+  simulatedDelivery: boolean;
 }
 
 export type EmailStatus = 'scheduled' | 'sending' | 'sent' | 'failed';

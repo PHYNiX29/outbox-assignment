@@ -23,7 +23,11 @@ const publicUser = (u: { id: string; email: string; name: string; avatarUrl: str
 
 /** Which optional integrations are configured – lets the UI show helpful messages. */
 authRouter.get('/config', (_req, res) => {
-  res.json({ googleEnabled: features.google, slackEnabled: features.slack });
+  res.json({
+    googleEnabled: features.google,
+    slackEnabled: features.slack,
+    simulatedDelivery: features.simulatedDelivery,
+  });
 });
 
 // ---------- Google OAuth (authorization code flow) ----------

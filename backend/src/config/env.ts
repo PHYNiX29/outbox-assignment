@@ -24,6 +24,8 @@ const schema = z.object({
 
   ETHEREAL_SENDER_COUNT: z.coerce.number().int().positive().default(3),
   ETHEREAL_ACCOUNTS: z.string().optional().default(''),
+  // auto = simulate on Railway (its non-Pro plans block outbound SMTP), real SMTP everywhere else.
+  EMAIL_DELIVERY: z.enum(['auto', 'smtp', 'simulate']).default('auto'),
 
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
@@ -38,4 +40,6 @@ export const env = schema.parse(process.env);
 export const features = {
   google: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
   slack: Boolean(env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET),
+  simulatedDelivery:
+    env.EMAIL_DELIVERY === 'simulate' || (env.EMAIL_DELIVERY === 'auto' && Boolean(process.env.RAILWAY_PROJECT_ID)),
 };

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowLeft, ChevronDown, Clock, Paperclip } from 'lucide-react';
-import { useScheduleCampaign, useSenders } from '../api/hooks';
+import { useAppConfig, useScheduleCampaign, useSenders } from '../api/hooks';
 import type { Recipient } from '../api/types';
 import { RecipientInput } from '../components/compose/RecipientInput';
 import { RichTextEditor } from '../components/compose/RichTextEditor';
@@ -25,6 +25,7 @@ export function ComposePage() {
   const navigate = useNavigate();
   const senders = useSenders();
   const schedule = useScheduleCampaign();
+  const { data: config } = useAppConfig();
   // One idempotency key per compose session: double-clicks / retries can't create duplicate campaigns.
   const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +74,12 @@ export function ComposePage() {
       {
         onSuccess: (r) => {
           toast.success(`${r.scheduled} email${r.scheduled === 1 ? '' : 's'} scheduled`);
+          if (config?.simulatedDelivery) {
+            toast(
+              "Heads up: SMTP isn't available on Railway's free plan, so these sends will be simulated. Run the project locally to deliver them via Ethereal.",
+              { icon: '⚠️', duration: 8000 },
+            );
+          }
           navigate('/scheduled');
         },
         onError: (e) => toast.error(e.message),

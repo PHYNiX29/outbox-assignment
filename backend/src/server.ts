@@ -1,5 +1,5 @@
 import type { Worker } from 'bullmq';
-import { env } from './config/env';
+import { env, features } from './config/env';
 import { createApp } from './app';
 import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
@@ -15,6 +15,10 @@ async function main() {
   await ensureSenders();
   void initSearch();
   await reconcileScheduledEmails();
+
+  if (features.simulatedDelivery) {
+    logger.warn('server', 'EMAIL_DELIVERY: simulated – SMTP is skipped (outbound SMTP is blocked on this host)');
+  }
 
   const worker: Worker | null = env.RUN_WORKER ? startWorker() : null;
 

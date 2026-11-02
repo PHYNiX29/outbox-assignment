@@ -1,6 +1,6 @@
 import { DelayedError, type Job } from 'bullmq';
 import nodemailer from 'nodemailer';
-import { env } from '../config/env';
+import { env, features } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { getTransport } from '../services/sender.service';
@@ -9,6 +9,9 @@ import { notifyRateLimit } from '../services/slack.service';
 import { htmlToText } from '../utils/text';
 import type { EmailJobData } from './emailQueue';
 import { markLimitNotified, nextWindowSlot, releaseSendSlot, reserveSenderGapSlot, reserveSendSlot } from './rateLimiter';
+
+// Builds the full message (and a Message-ID) without opening any network connection.
+const simulatedTransport = nodemailer.createTransport({ jsonTransport: true });
 
 type Result = { status: 'sent' | 'skipped' | 'failed'; reason?: string; previewUrl?: string | null };
 
@@ -89,7 +92,8 @@ export async function processEmailJob(job: Job<EmailJobData>, token?: string): P
 
   // ---- Send ----
   try {
-    const info = await getTransport(email.sender).sendMail({
+    const transport = features.simulatedDelivery ? simulatedTransport : getTransport(email.sender);
+    const info = await transport.sendMail({
       from: `"${email.sender.name}" <${email.sender.email}>`,
       to: email.toName ? `"${email.toName}" <${email.toEmail}>` : email.toEmail,
       subject: email.subject,
@@ -105,7 +109,11 @@ export async function processEmailJob(job: Job<EmailJobData>, token?: string): P
       data: { status: 'SENT', sentAt, messageId: info.messageId, previewUrl, failedReason: null },
     });
     await updateEmailDoc(emailId, { status: 'sent', sentAt: sentAt.toISOString() });
-    logger.info('worker', `sent ${email.toEmail} via ${email.sender.email}`, previewUrl ?? '');
+    logger.info(
+      'worker',
+      `${features.simulatedDelivery ? 'simulated send' : 'sent'} ${email.toEmail} via ${email.sender.email}`,
+      previewUrl ?? '',
+    );
     return { status: 'sent', previewUrl };
   } catch (err) {
     const message = (err as Error).message;
