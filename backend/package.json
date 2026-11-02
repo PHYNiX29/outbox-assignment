@@ -4,9 +4,10 @@
   "private": true,
   "description": "Email scheduler service (Express + BullMQ + Postgres + Elasticsearch)",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "dev:api": "cross-env RUN_WORKER=false tsx watch src/server.ts",
-    "dev:worker": "tsx watch src/worker.ts",
+    "dev": "node --import tsx src/server.ts",
+    "dev:watch": "tsx watch src/server.ts",
+    "dev:api": "cross-env RUN_WORKER=false node --import tsx src/server.ts",
+    "dev:worker": "node --import tsx src/worker.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "start:worker": "node dist/worker.js",

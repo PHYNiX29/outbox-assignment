@@ -43,7 +43,8 @@ cd backend
 cp .env.example .env            # then set JWT_SECRET (and later Google/Slack keys)
 npm install
 npx prisma migrate deploy       # create tables
-npm run dev                     # http://localhost:4000
+npm run dev                     # http://localhost:4000  (Ctrl+C = graceful shutdown)
+# npm run dev:watch             # auto-reload while coding; on Windows its Ctrl+C is a hard kill
 
 # 3. Frontend (new terminal)
 cd frontend
@@ -135,7 +136,10 @@ An optional `Idempotency-Key` header makes the endpoint safe to retry. The front
 - **Reconciliation on boot:** Postgres is the source of truth. Every `SCHEDULED` row is re-added to the queue with the same `jobId`.
   - BullMQ ignores duplicate job IDs, so this never creates duplicates.
   - It only repairs the case where Redis data was lost. Overdue emails are sent immediately, still subject to the rate limits.
-- **Graceful shutdown:** on SIGINT/SIGTERM the server stops accepting HTTP requests, `worker.close()` lets in-flight jobs finish, and then connections close.
+- **Graceful shutdown:** on SIGINT/SIGTERM (Ctrl+C) the server stops accepting HTTP requests and stops picking up new jobs. `worker.close()` lets in-flight sends finish, and then connections close.
+  - `npm run dev` runs plain `node --import tsx`, so Ctrl+C reaches the server directly.
+  - `tsx watch` is only used for `dev:watch`. On Windows it force-kills its child process on Ctrl+C, which would cut a send off midway.
+  - After a hard kill (power loss, `kill -9`), an email that was mid-send is marked `failed` instead of being resent (see Idempotency below).
 - **Elasticsearch backfill:** on boot, if the index has fewer documents than Postgres, it's re-indexed from the database.
 
 ### Idempotency (no email is sent twice)

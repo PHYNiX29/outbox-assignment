@@ -23,17 +23,27 @@ async function main() {
   });
 
   // Graceful shutdown: stop taking HTTP traffic, let in-flight jobs finish, then close connections.
+  // Note: run with `node --import tsx` (npm run dev), not `tsx watch`. On Windows, tsx watch force-kills
+  // the child process on Ctrl+C, so in-flight sends would be cut off instead of finishing.
   let closing = false;
   const shutdown = async (signal: string) => {
-    if (closing) return;
+    if (closing) {
+      logger.warn('server', 'already shutting down – waiting for in-flight emails to finish');
+      return;
+    }
     closing = true;
-    logger.info('server', `${signal} received, shutting down…`);
+    logger.info('server', `${signal} received – graceful shutdown started`);
     server.close();
-    await worker?.close();
+    if (worker) {
+      const active = await emailQueue.getActiveCount();
+      logger.info('server', `waiting for ${active} in-flight job(s) to finish (no new jobs will be picked up)…`);
+      await worker.close();
+    }
     await emailQueue.close();
     closeTransports();
     await redis.quit();
     await prisma.$disconnect();
+    logger.info('server', 'shutdown complete – scheduled jobs remain safely in Redis');
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));
