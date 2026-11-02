@@ -5,7 +5,19 @@ import { logger } from '../lib/logger';
 import { htmlToText } from '../utils/text';
 import { prisma } from '../lib/prisma';
 
-export const es = new Client({ node: env.ELASTICSEARCH_URL });
+/** A missing or malformed ELASTICSEARCH_URL disables ES (search falls back to Postgres) instead of crashing. */
+function createClient(): Client | null {
+  if (!env.ELASTICSEARCH_URL) return null;
+  try {
+    return new Client({ node: env.ELASTICSEARCH_URL });
+  } catch (err) {
+    logger.warn('search', `invalid ELASTICSEARCH_URL "${env.ELASTICSEARCH_URL}"`, (err as Error).message);
+    return null;
+  }
+}
+const client = createClient();
+// Only used after `ready` is true, which requires a client.
+const es = client as Client;
 const INDEX = env.ELASTICSEARCH_INDEX;
 
 let ready = false;
@@ -43,6 +55,10 @@ export const toDoc = (e: Email & { sender: Pick<Sender, 'email' | 'name'> }): Em
 
 /** Create the index (idempotent). Retries in the background because ES boots slowly. */
 export async function initSearch(retries = 30): Promise<void> {
+  if (!client) {
+    logger.warn('search', 'Elasticsearch disabled – search uses Postgres');
+    return;
+  }
   for (let i = 0; i < retries; i++) {
     try {
       const exists = await es.indices.exists({ index: INDEX });
