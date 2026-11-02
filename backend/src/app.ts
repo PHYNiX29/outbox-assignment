@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -16,6 +18,7 @@ import { isSearchReady } from './services/search.service';
 
 export function createApp() {
   const app = express();
+  app.set('trust proxy', 1); // behind Railway's HTTPS proxy in production
 
   app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
   app.use(express.json({ limit: '5mb' }));
@@ -33,6 +36,13 @@ export function createApp() {
   app.use('/api/emails', emailsRouter);
   app.use('/api/senders', sendersRouter);
   app.use('/api/slack', slackRouter);
+
+  // In production the built React app is served from here, so UI, API and cookies share one domain.
+  const webDist = path.resolve(__dirname, '../../frontend/dist');
+  if (fs.existsSync(path.join(webDist, 'index.html'))) {
+    app.use(express.static(webDist));
+    app.get(/^\/(?!api\/|admin\/).*/, (_req, res) => res.sendFile(path.join(webDist, 'index.html')));
+  }
 
   app.use(errorHandler);
   return app;

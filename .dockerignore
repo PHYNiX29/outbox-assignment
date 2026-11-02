@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/.env
+**/*.log
+**/*.tsbuildinfo
+docs
+outbox.zip
+Software Development Intern Assignment*.md

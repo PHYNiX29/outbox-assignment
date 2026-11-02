@@ -105,6 +105,15 @@ Slack requires an **HTTPS** redirect URL, so expose the backend through a tunnel
 
 ---
 
+### Deploying (Railway)
+
+The root `Dockerfile` builds the React app and the API into one image. Express serves the UI, `/api` and `/admin/queues` from a single domain, so cookies and OAuth redirects need no CORS setup. On start the container runs `prisma migrate deploy`, then starts the API and worker.
+
+1. Create a Railway project from this GitHub repo. `railway.json` selects the Dockerfile and sets a `/api/health` healthcheck.
+2. Add the **PostgreSQL** and **Redis** services. Elasticsearch is optional: add it from a template, or leave it out and search falls back to Postgres `ILIKE`.
+3. Set these variables on the app service: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `REDIS_URL=${{Redis.REDIS_URL}}`, `ELASTICSEARCH_URL` (if used), `JWT_SECRET`, `NODE_ENV=production`, `FRONTEND_URL` and `BACKEND_URL` (both set to the public Railway URL), plus the Google and Slack keys.
+4. Add `<public-url>/api/auth/google/callback` to the Google OAuth client and `<public-url>/api/slack/callback` to the Slack app's redirect URLs, and set `SLACK_REDIRECT_URI` to that callback.
+
 ## 2. Architecture
 
 ```
