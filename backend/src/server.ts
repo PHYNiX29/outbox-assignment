@@ -21,6 +21,15 @@ async function main() {
   const server = createApp().listen(env.PORT, () => {
     logger.info('server', `API on http://localhost:${env.PORT}  |  queue dashboard: http://localhost:${env.PORT}/admin/queues`);
   });
+  server.on('error', async (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.error('server', `Port ${env.PORT} is already in use – another backend is probably still running. Stop it and try again.`);
+    } else {
+      logger.error('server', err.message);
+    }
+    await worker?.close();
+    process.exit(1);
+  });
 
   // Graceful shutdown: stop taking HTTP traffic, let in-flight jobs finish, then close connections.
   // Note: run with `node --import tsx` (npm run dev), not `tsx watch`. On Windows, tsx watch force-kills
