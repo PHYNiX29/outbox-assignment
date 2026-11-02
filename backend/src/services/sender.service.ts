@@ -97,6 +97,9 @@ export function getTransport(sender: Sender): Transporter {
       auth: { user: sender.smtpUser, pass: sender.smtpPass },
       pool: true,
       maxConnections: 3,
+      // Fail fast if the SMTP server can't be reached (nodemailer's default waits 2 minutes).
+      connectionTimeout: 15_000,
+      greetingTimeout: 10_000,
     });
     transports.set(sender.id, t);
   }
